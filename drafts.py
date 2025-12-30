@@ -22,26 +22,6 @@ from torchvision.models import ViT_B_16_Weights
 
 
 
-class IA3Layer(nn.Module):
-    def __init__(self, original_linear_layer):
-        super().__init__()
-        self.original_linear_layer = original_linear_layer
-        
-        # 1. Create the learnable vector 'l'
-        # It must have the same size as the output of the layer
-        n_out = original_linear_layer.out_features
-        self.ia3_vector = nn.Parameter(torch.ones(n_out)) # Initialize to 1s (identity)
-
-    def forward(self, x):
-        # 2. Run the original frozen layer
-        output = self.original_linear_layer(x)
-        
-        # 3. Apply the IA3 scaling
-        # We use element-wise multiplication
-        return output * self.ia3_vector
-    
-
-
 
 
 # Load the model with the best available pre-trained weights

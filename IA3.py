@@ -3,26 +3,32 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 
-class LoRALinear(nn.Module):
-    def __init__(self, original_layer, rank = 4, alpha = 1.0):
-        super(LoRALinear, self).__init__()
-        self.original_layer = original_layer
-        self.rank = rank
-        self.alpha = alpha
 
-        self.lora_A = nn.Parameter(torch.randn(original_layer.out_features, rank) * 0.01)
-        self.lora_B = nn.Parameter(torch.randn(rank, original_layer.in_features) * 0.01)
+
+class IA3Linear(nn.Module):
+    '''
+    By design, this only gets applied to the second linear layer in the encoder blocks
+    could try something more
+    '''
+    def __init__(self, original_linear_layer):
+        super().__init__()
+        self.original_linear_layer = original_linear_layer
+        
+        n_out = original_linear_layer.out_features
+        self.ia3_vector = nn.Parameter(torch.ones(n_out)) 
 
     def forward(self, x):
-        original_output = self.original_layer(x)
-        lora_output = (self.lora_A @ self.lora_B) @ x.T
-        lora_output = lora_output.T * (self.alpha / self.rank)
-        return original_output + lora_output
-    
+
+        #might be wrong maybe it's self.ia3_vector+X
+        new_input =  x*self.ia3_vector
+
+        output = self.original_linear_layer(new_input)
+        return output
 
 
-class LoRASelfAttention(nn.Module):
-    def __init__(self, original_attn: nn.MultiheadAttention, rank=4, alpha=4.0, qkv = [True, False, False]):
+
+class IA3SelfAttention(nn.Module):
+    def __init__(self, original_attn: nn.MultiheadAttention, alpha=4.0, qkv = [False, True, True]):
         '''
         qkv is a list of bools, they indicate to which blocks to apply the lora
         '''
@@ -35,7 +41,6 @@ class LoRASelfAttention(nn.Module):
         self.scale = self.head_dim ** -0.5
         
 
-        self.rank = rank
         self.lora_alpha = alpha
         self.scaling = self.lora_alpha / self.rank
         self.which_proj = qkv
@@ -60,16 +65,12 @@ class LoRASelfAttention(nn.Module):
                 self.k_proj.bias.copy_(fused_b[self.embed_dim:2*self.embed_dim])
                 self.v_proj.bias.copy_(fused_b[2*self.embed_dim:])
 
-
         if qkv[0]:
-            self.lora_A_q = nn.Parameter(torch.randn(rank, self.embed_dim)*0.01)
-            self.lora_B_q = nn.Parameter(torch.zeros(self.embed_dim, rank))
+            self.ia3_q = nn.Parameter( torch.randn(self.embed_dim))
         if qkv[1]:
-            self.lora_A_k = nn.Parameter(torch.randn(rank, self.embed_dim)*0.01)
-            self.lora_B_k = nn.Parameter(torch.zeros(self.embed_dim, rank))
+            self.ia3_k = nn.Parameter( torch.randn(self.embed_dim))
         if qkv[2]:
-            self.lora_A_v = nn.Parameter(torch.randn(rank, self.embed_dim)*0.01)
-            self.lora_B_v = nn.Parameter(torch.zeros(self.embed_dim, rank))
+            self.ia3_v = nn.Parameter( torch.randn(self.embed_dim))
 
 
     def forward(self, query, key, value, attn_mask=None, **kwargs):
@@ -85,17 +86,13 @@ class LoRASelfAttention(nn.Module):
         
 
         if self.which_proj[0]:
-            lora_q = (query @ self.lora_A_q.T) @ self.lora_B_q.T
-            q += (lora_q * self.scaling)
+            q = self.ia3_q*q
         
         if self.which_proj[1]:
-            lora_k = (key @ self.lora_A_k.T) @ self.lora_B_k.T
-            k += (lora_k * self.scaling)
+            k = self.ia3_k*k
 
         if self.which_proj[2]:
-            lora_v = (value @ self.lora_A_v.T) @ self.lora_B_v.T
-            v += (lora_v * self.scaling)
-        
+            v = self.ia3_v*v
 
         B, L, E = q.shape
         
