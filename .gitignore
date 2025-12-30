@@ -1,3 +1,8 @@
+# Datasets
+data/
+*.tgz
+*.zip
 
-# Virtual environment
-venv/
+# Python cache
+__pycache__/
+
