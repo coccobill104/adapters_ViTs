@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-
+import copy
 
 
 class IA3Linear(nn.Module):
@@ -42,7 +42,7 @@ class IA3SelfAttention(nn.Module):
         
 
         self.lora_alpha = alpha
-        self.scaling = self.lora_alpha / self.rank
+        self.scaling = self.lora_alpha
         self.which_proj = qkv
 
 
@@ -66,18 +66,15 @@ class IA3SelfAttention(nn.Module):
                 self.v_proj.bias.copy_(fused_b[2*self.embed_dim:])
 
         if qkv[0]:
-            self.ia3_q = nn.Parameter( torch.randn(self.embed_dim))
+            self.ia3_q = nn.Parameter( torch.ones(self.embed_dim))
         if qkv[1]:
-            self.ia3_k = nn.Parameter( torch.randn(self.embed_dim))
+            self.ia3_k = nn.Parameter( torch.ones(self.embed_dim))
         if qkv[2]:
-            self.ia3_v = nn.Parameter( torch.randn(self.embed_dim))
+            self.ia3_v = nn.Parameter( torch.ones(self.embed_dim))
 
 
     def forward(self, query, key, value, attn_mask=None, **kwargs):
-        """
-        In ViT Encoder: query, key, and value are usually the same tensor 'x'.
-        Shape of input: (Batch, Seq_Len, Embed_Dim) if batch_first=True
-        """
+        
         is_batched = query.dim() == 3
 
         q = self.q_proj(query)
@@ -111,3 +108,24 @@ class IA3SelfAttention(nn.Module):
         output = self.out_proj(attn_output)
         
         return output, None
+
+
+
+def apply_IA3(model, mlps=True, attention=True, qkv = [False, True, True]):
+    '''
+    mlps = True if ia3 to be applied on mlp layers
+    attention = True if ia3 to be applied on self attention layers
+    qkv = where to apply ia3, only relevant if attention=True
+    '''
+
+    new_model = copy.deepcopy(model)
+    layers = new_model.encoder.layers
+
+    for layer in layers: 
+        if mlps:
+            layer.mlp[3] = IA3Linear(layer.mlp[3])
+        
+        if attention:
+            layer.self_attention = IA3SelfAttention(layer.self_attention, qkv = qkv)
+
+    return new_model

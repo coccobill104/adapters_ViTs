@@ -11,3 +11,8 @@ env/
 data/
 *.tgz
 *.zip
+
+
+# Too large
+
+vtab1k-pytorch-main

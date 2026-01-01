@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import copy
 
 class LoRALinear(nn.Module):
     def __init__(self, original_layer, rank = 4, alpha = 1.0):
@@ -114,3 +115,24 @@ class LoRASelfAttention(nn.Module):
         output = self.out_proj(attn_output)
         
         return output, None
+
+
+
+def apply_LoRA(model, r=4, mlps:bool = True, attention: bool =False, qkv: dict =[False, False, False]):
+    '''
+    r = rank of the Lora
+    mlps = True if lora to be applied on mlp layers
+    attention = True if lora to be applied on self attention layers
+    qkv = where to apply lora, only relevant if attention=True
+    '''
+    new_model = copy.deepcopy(model)
+    layers = new_model.encoder.layers
+    for layer in layers:
+        if mlps:
+            layer.mlp[0] = LoRALinear(layer.mlp[0], rank=r)
+            layer.mlp[3] = LoRALinear(layer.mlp[3], rank=r)
+        if attention:
+            layer.self_attention = LoRASelfAttention(layer.self_attention, rank=r, q=qkv[0], k=qkv[1], v=qkv[2])
+    return new_model
+
+

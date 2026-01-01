@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+import copy
 
 
 
@@ -16,8 +17,8 @@ class VeRALinear(nn.Module):
         self.B = B
         self.rank = rank
 
-        self.vera_middle = torch.ones(self.rank, dtype=torch.float32)
-        self.vera_out = torch.zeros(original_layer.out_features, dtype=torch.float32)
+        self.vera_middle = nn.Parameter(torch.ones(self.rank, dtype=torch.float32))
+        self.vera_out = nn.Parameter(torch.zeros(original_layer.out_features, dtype=torch.float32))
 
     def forward(self, x):
         original_output = self.original_layer(x)
@@ -125,3 +126,37 @@ class VeRASelfAttention(nn.Module):
         output = self.out_proj(attn_output)
         
         return output, None
+    
+
+
+
+def apply_VeRA(model, r=4, mlps = True, attention = False, qkv=[False, False, False], seed=0):
+    '''
+    r = rank of the Vera
+    mlps = True if vera to be applied on mlp layers
+    attention = True if vera to be applied on self attention layers
+    qkv = where to apply vera, only relevant if attention=True
+    '''
+
+    new_model = copy.deepcopy(model)
+    layers = new_model.encoder.layers
+    
+    if mlps:
+        mlp_dim = layers[0].mlp[0].out_features
+        A_mlp = torch.randn(r, mlp_dim)
+        B_mlp = torch.randn(mlp_dim, r)
+
+    if attention:
+        attention_dim = layers[0].self_attention.embed_dim
+        attention_matrices = {'A_q': torch.randn(r, attention_dim), 'A_k': torch.randn(r, attention_dim), 'A_v': torch.randn(r, attention_dim), 
+                    'B_q': torch.randn(attention_dim, r), 'B_k':  torch.randn(attention_dim, r), 'B_v':  torch.randn(attention_dim, r)
+                    }
+        
+    for layer in layers: 
+        if mlps:
+            layer.mlp[0] = VeRALinear(layer.mlp[0], A_mlp, B_mlp, rank=r)
+            layer.mlp[3] = VeRALinear(layer.mlp[3], A_mlp, B_mlp, rank=r)
+
+        if attention:
+            layer.self_attention = VeRASelfAttention(layer.self_attention, rank=r, qkv = qkv, matrices = attention_matrices)
+    return new_model
