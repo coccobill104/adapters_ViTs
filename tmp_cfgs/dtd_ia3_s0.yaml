@@ -1,0 +1,28 @@
+adapter:
+  alpha: 16
+  attention: true
+  dropout: 0.0
+  mlps: true
+  qkv:
+  - false
+  - true
+  - true
+  r: 8
+amp: true
+backbone: vit_base_patch16_224
+epochs: 30
+method: ia3
+optim:
+  lr: 0.0003
+  weight_decay: 0.0
+patience: 5
+results_csv: ./results/results.csv
+seed: 0
+task:
+  batch_size: 64
+  image_size: 224
+  name: dtd
+  num_classes: 47
+  num_workers: 2
+  train_k: 1000
+  val_k: 1000

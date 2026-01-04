@@ -9,7 +9,7 @@ class IA3Linear(nn.Module):
     By design, this only gets applied to the second linear layer in the encoder blocks
     could try something more
     '''
-    def __init__(self, original_linear_layer):
+    def __init__(self, original_linear_layer, alpha=0, dropout=0):
         super().__init__()
         self.original_linear_layer = original_linear_layer
         
@@ -22,12 +22,13 @@ class IA3Linear(nn.Module):
         new_input =  x*self.ia3_vector
 
         output = self.original_linear_layer(new_input)
+    
         return output
 
 
 
 class IA3SelfAttention(nn.Module):
-    def __init__(self, original_attn: nn.MultiheadAttention, alpha=4.0, qkv = [False, True, True]):
+    def __init__(self, original_attn: nn.MultiheadAttention, alpha=4.0, qkv = [False, True, True], dropout=0):
         '''
         qkv is a list of bools, they indicate to which blocks to apply the lora
         '''
@@ -117,7 +118,7 @@ class IA3SelfAttention(nn.Module):
 
 
 
-def apply_IA3(model, mlps=True, attention=True, qkv = [False, True, True]):
+def apply_IA3(model, mlps=True, attention=True, qkv = [False, True, True], alpha=1, dropout=0, r=0):
     '''
     mlps = True if ia3 to be applied on mlp layers
     attention = True if ia3 to be applied on self attention layers

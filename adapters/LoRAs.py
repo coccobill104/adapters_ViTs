@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import copy
 
 class LoRALinear(nn.Module):
-    def __init__(self, original_layer, rank = 4, alpha = 1.0):
+    def __init__(self, original_layer, rank = 4, alpha = 1.0, dropout=0):
         super(LoRALinear, self).__init__()
         self.original_layer = original_layer
         self.rank = rank
@@ -23,7 +23,7 @@ class LoRALinear(nn.Module):
 
 
 class LoRASelfAttention(nn.Module):
-    def __init__(self, original_attn: nn.MultiheadAttention, rank=4, alpha=4.0, qkv = [True, False, False]):
+    def __init__(self, original_attn: nn.MultiheadAttention, rank=4, alpha=4.0, qkv = [True, False, False], dropout=0):
         '''
         qkv is a list of bools, they indicate to which blocks to apply the lora
         '''
@@ -122,7 +122,7 @@ class LoRASelfAttention(nn.Module):
 
 
 
-def apply_LoRA(model, r=4, mlps:bool = True, attention: bool =False, qkv: dict =[False, False, False]):
+def apply_LoRA(model, r=4, mlps:bool = True, attention: bool =False, qkv: dict =[False, False, False], alpha = 1, dropout=0):
     '''
     r = rank of the Lora
     mlps = True if lora to be applied on mlp layers
@@ -133,12 +133,12 @@ def apply_LoRA(model, r=4, mlps:bool = True, attention: bool =False, qkv: dict =
     layers = new_model.encoder.layers
     for layer in layers:
         if mlps:
-            layer.mlp[0] = LoRALinear(layer.mlp[0], rank=r)
+            layer.mlp[0] = LoRALinear(layer.mlp[0], alpha= alpha, rank=r)
 
-            layer.mlp[3] = LoRALinear(layer.mlp[3], rank=r)
+            layer.mlp[3] = LoRALinear(layer.mlp[3], alpha=alpha, rank=r)
 
         if attention:
-            layer.self_attention = LoRASelfAttention(layer.self_attention, rank=r, qkv = qkv)
+            layer.self_attention = LoRASelfAttention(layer.self_attention, alpha=alpha, rank=r, qkv = qkv)
     return new_model
 
 

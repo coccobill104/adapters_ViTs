@@ -7,7 +7,7 @@ import copy
 #remark: vera_out here is initialized as small but not 0 to reduce vanishing gradients in vera_middle
 
 class VeRALinear(nn.Module):
-    def __init__(self, original_layer, A, B, rank = 4):
+    def __init__(self, original_layer, A, B, rank = 4, alpha=0, dropout=0):
         ''''
         requires A, B matrices to be given
         '''
@@ -30,7 +30,7 @@ class VeRALinear(nn.Module):
 
 
 class VeRASelfAttention(nn.Module):
-    def __init__(self, original_attn: nn.MultiheadAttention, rank=4, alpha=4.0, qkv = [True, False, False], matrices:dict ={}):
+    def __init__(self, original_attn: nn.MultiheadAttention, rank=4, alpha=4.0, qkv = [True, False, False], matrices:dict ={}, dropout=0):
         '''
         q, k, v are bools, they indicate to which blocks to apply the vera
         matrices is a dict with keys A_q, A_k, A_v, B_q, B_k, B_v
@@ -132,7 +132,7 @@ class VeRASelfAttention(nn.Module):
 
 
 
-def apply_VeRA(model, r=4, mlps = True, attention = False, qkv=[False, False, False], seed=0):
+def apply_VeRA(model, r=4, mlps = True, attention = False, qkv=[False, False, False], seed=0, alpha=0, dropout=0):
     '''
     r = rank of the Vera
     mlps = True if vera to be applied on mlp layers

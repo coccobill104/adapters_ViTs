@@ -1,7 +1,7 @@
 import argparse, yaml, time
 import torch
 import torch.nn as nn
-from torch.cuda.amp import autocast
+from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 
 from datasets import TaskCfg, build_dataloaders
@@ -42,7 +42,9 @@ def train_one(cfg):
         weight_decay=cfg["optim"].get("weight_decay", 0.0),
     )
     criterion = nn.CrossEntropyLoss()
-    scaler = torch.amp.GradScaler(device = 'cuda', enabled=(device=="cuda" and cfg.get("amp", True)))
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    use_amp = (device.type == "cuda") and cfg.get("amp", True)
+    scaler = GradScaler(enabled=use_amp)
 
     best_val = -1
     best_state = None
@@ -52,22 +54,27 @@ def train_one(cfg):
     for epoch in range(cfg["epochs"]):
         model.train()
         timer = Timer(); timer.start()
-        if device == "cuda":
+        if device.type == "cuda":
             torch.cuda.reset_peak_memory_stats()
 
         for x,y in tqdm(train_loader, desc=f"epoch {epoch}", leave=False):
             x,y = x.to(device), y.to(device)
             optim.zero_grad(set_to_none=True)
             #with autocast(enabled=(device=="cuda" and cfg.get("amp", True))):
-            with torch.cuda.amp.autocast('cuda', enabled=(device=="cuda" and cfg.get("amp", True))):
+            with autocast(device_type="cuda", enabled=use_amp):
                 logits = model(x)
                 loss = criterion(logits, y)
-            scaler.scale(loss).backward()
-            scaler.step(optim)
-            scaler.update()
+            if use_amp:
+                scaler.scale(loss).backward()
+                scaler.step(optim)
+                scaler.update()
+            else:
+                loss.backward()
+                optim.step()
+
 
         epoch_time = timer.stop()
-        peak_mem = (torch.cuda.max_memory_allocated()/1e9) if device=="cuda" else 0.0
+        peak_mem = (torch.cuda.max_memory_allocated() / 1e9) if device.type == "cuda" else 0.0
 
         val_acc = evaluate(model, val_loader, device)
         if val_acc > best_val:

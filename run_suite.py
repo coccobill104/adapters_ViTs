@@ -14,7 +14,7 @@ BASE = {
     "amp": True,
     "optim": {"lr": 3e-4, "weight_decay": 0.0},
     "task": {"image_size":224, "train_k":1000, "val_k":1000, "batch_size":64, "num_workers":2},
-    "adapter": {"r":8, "alpha":16, "dropout":0.0},  # usato solo da LoRA/VeRA/IA3 se serve
+    "adapter": {"r":8, "alpha":16, "dropout":0.0, "mlps": True, "attention": True, "qkv": [False, True, True]}, 
     "results_csv": "./results/results.csv",
 }
 
