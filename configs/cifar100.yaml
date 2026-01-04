@@ -1,0 +1,43 @@
+# -------------------------
+# Experiment configuration
+# -------------------------
+
+# Backbone
+backbone: vit_base_patch16_224
+
+# Method: one of [linear, lora, vera, ia3]
+method: lora
+
+# Random seed
+seed: 0
+
+# Training
+epochs: 30
+patience: 5
+amp: true
+
+# Optimizer
+optim:
+  lr: 0.0003
+  weight_decay: 0.0
+
+# Task / dataset
+task:
+  name: cifar100
+  num_classes: 100
+  image_size: 224
+  train_k: 1000
+  val_k: 1000
+  batch_size: 32
+  num_workers: 2
+
+# Adapter-specific parameters
+# (used only if method != linear)
+adapter:
+  r: 8
+  alpha: 16
+  dropout: 0.0
+
+# Output
+results_csv: ./results/results.csv
+data_root: ./data
