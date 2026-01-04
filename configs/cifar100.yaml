@@ -37,6 +37,9 @@ adapter:
   r: 8
   alpha: 16
   dropout: 0.0
+  mlps : true
+  attention : true
+  qkv : [false, true, true]
 
 # Output
 results_csv: ./results/results.csv
