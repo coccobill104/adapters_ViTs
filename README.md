@@ -29,7 +29,6 @@ Keep track of: 1. number and percentage of trainable parameters, 2. epoch time, 
 
 
 
-
 Requirements:
 
 torch

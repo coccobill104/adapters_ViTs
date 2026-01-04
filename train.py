@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.cuda.amp import autocast
 from tqdm import tqdm
 
-from data.datasets import TaskCfg, build_dataloaders
+from datasets import TaskCfg, build_dataloaders
 from models.build import build_model
 from utils.seed import set_seed
 from utils.metrics import accuracy_top1

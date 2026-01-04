@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torchvision.models import vit_b_16, ViT_B_16_Weights
 
-from data.datasets import TaskCfg, build_dataloaders
+from datasets import TaskCfg, build_dataloaders
 
 # tuoi import
 from adapters.PEFTclass import PEFTViT

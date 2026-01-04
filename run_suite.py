@@ -6,8 +6,7 @@ TASKS = [
     {"name":"dtd", "num_classes":47},
 ]
 METHODS = ["linear", "lora", "vera", "ia3"]
-SEEDS = [0]  # metti [0,1,2] per 3 seed su subset
-
+SEEDS = [0]
 BASE = {
     "backbone": "vit_base_patch16_224",
     "epochs": 30,
